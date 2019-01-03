@@ -1,82 +1,43 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { first } from 'rxjs/operators';
-import { UserService } from '../_services/user.service';
-import { DoctorService } from '../_services/doctor.service';
-import {FileService} from '../_services/file.service';
+import { Component, forwardRef, OnInit } from '@angular/core';
+import { ControlValueAccessor, FormBuilder, FormGroup, NG_VALUE_ACCESSOR, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-doctor-register',
   templateUrl: './doctor-register.component.html',
-  styleUrls: ['./doctor-register.component.css']
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      multi: true,
+      useExisting: forwardRef(() => DoctorRegisterComponent)
+    }
+  ]
 })
-export class DoctorRegisterComponent implements OnInit {
-  userRegisterForm: FormGroup;
+export class DoctorRegisterComponent implements OnInit, ControlValueAccessor {
   doctorRegisterForm: FormGroup;
-  avatar: File;
+  constructor(private formBuilder: FormBuilder) {}
 
-  constructor(
-    private formBuilder: FormBuilder,
-    private router: Router,
-    private userService: UserService,
-    private doctorsService: DoctorService,
-    private fileService: FileService
-  ) { }
+  onTouched: () => void = () => {};
 
-  ngOnInit() {
-    this.userRegisterForm = this.formBuilder.group({
-      firstName: ['', Validators.required],
-      lastName: ['', Validators.required],
-      username: ['', Validators.required],
-      password: ['', Validators.required],
-    });
+  ngOnInit(): void {
     this.doctorRegisterForm = this.formBuilder.group({
       specialty: ['', Validators.required],
-      experience: [0]
-    });
+      experience: [0, Validators.required]
+      });
   }
 
-  onSubmit() {
-    if (this.userRegisterForm.invalid || this.doctorRegisterForm.invalid) {
-      return;
-    }
-
-    /*this.userService.registerUser(this.userRegisterForm.value)
-      .pipe(first())
-      .subscribe(
-        data => {
-          console.log(`Successfully added user: ${data}`);
-        },
-        error => {
-          console.log('Failed to add user');
-          console.log(error);
-        }
-      );*/
-
-    this.doctorRegisterForm.addControl('username', this.userRegisterForm.controls['username']);
-    this.doctorsService.registerDoctor(this.doctorRegisterForm.value)
-      .pipe(first())
-      .subscribe(
-        doc => {
-          console.log(`Added doctor ${doc}`);
-          this.fileService.uploadFile(this.avatar, doc.username)
-            .pipe(first())
-            .subscribe(data => {
-                this.router.navigate(['/login']);
-              },
-              error => {
-                console.log('Failed to upload the image and register doctor');
-              });
-        },
-        errorDoc => {
-          console.log('failed to add doctor');
-          console.log(errorDoc);
-        }
-      );
+  writeValue(v: any) {
+    this.doctorRegisterForm.setValue(v, { emitEvent: false });
   }
 
-  onFileChanged(event) {
-    this.avatar = event.target.files[0];
+  registerOnChange(fn: (v: any) => void) {
+    this.doctorRegisterForm.valueChanges.subscribe(fn);
+  }
+
+  setDisabledState(disabled: boolean) {
+    disabled ? this.doctorRegisterForm.disable() : this.doctorRegisterForm.enable();
+  }
+
+  registerOnTouched(fn: () => void) {
+    this.onTouched = fn;
   }
 }

@@ -1,11 +1,10 @@
 import { Component, OnInit } from '@angular/core';
+import { FormGroup } from '@angular/forms';
 import { Doctor } from '../_models/doctor';
 import { DoctorService } from '../_services/doctor.service';
-import {User} from '../_models/user';
-import {FileService} from '../_services/file.service';
+import { FileService } from '../_services/file.service';
 import { AuthenticationService } from '../_services/authentication.service';
 
-const blacklisted = ['id', 'role', 'token'];
 
 @Component({
   selector: 'app-doctor-profile',
@@ -13,13 +12,12 @@ const blacklisted = ['id', 'role', 'token'];
   styleUrls: ['./doctor-profile.component.css']
 })
 export class DoctorProfileComponent implements OnInit {
-  doctor: Doctor;
-  userDetails: User;
-  avatar: any;
-  isImageLoading: boolean;
+  public avatarUpdateForm = new FormGroup({});
+  public avatar: any;
+  private newAvatar: File;
+  public isImageLoading: boolean;
 
   constructor(
-    private doctorService: DoctorService,
     private fileService: FileService,
     private authenticationService: AuthenticationService
   ) { }
@@ -29,22 +27,17 @@ export class DoctorProfileComponent implements OnInit {
   }
 
   getAdditionalDoctorInfo() {
-    this.userDetails = JSON.parse(localStorage.getItem('currentUser'));
+    const docUsername = this.authenticationService.getCurrentUser().user_name;
+        this.isImageLoading = true;
+        this.fileService.getAvatar(docUsername)
+          .subscribe(data => {
+            this.createImageFromBlob(data);
+            this.isImageLoading = false;
+          }, error => {
+            this.isImageLoading = false;
+            console.log(error);
+          });
 
-    this.doctorService.getDoctor(this.authenticationService.getCurrentUser().user_name)
-      .subscribe(doc => {
-        this.doctor = doc;
-      });
-
-    this.isImageLoading = true;
-    this.fileService.getAvatar(this.doctor.username)
-      .subscribe(data => {
-        this.createImageFromBlob(data);
-        this.isImageLoading = false;
-      }, error => {
-        this.isImageLoading = false;
-        console.log(error);
-      });
   }
 
   createImageFromBlob(image: Blob) {
@@ -56,5 +49,21 @@ export class DoctorProfileComponent implements OnInit {
     if (image) {
       reader.readAsDataURL(image);
     }
+  }
+
+  onFileChanged(event) {
+    this.newAvatar = event.target.files[0];
+  }
+
+  onSubmit() {
+    console.log('here');
+    const docUsername = this.authenticationService.getCurrentUser().user_name;
+    this.fileService.updateAvatar(this.newAvatar, docUsername)
+      .subscribe(data => {
+          console.log('Successfully updated avatar!');
+          this.ngOnInit();
+      }, error => {
+          console.log(`Could not update avatar!: Error: ${error}`);
+      });
   }
 }

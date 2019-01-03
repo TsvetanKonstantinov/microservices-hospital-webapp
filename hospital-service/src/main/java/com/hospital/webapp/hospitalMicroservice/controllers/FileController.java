@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
+@RequestMapping("/api")
 public class FileController {
     private final DBFileStorageService dbFileStorageService;
 
@@ -22,8 +23,8 @@ public class FileController {
         this.dbFileStorageService = dbFileStorageService;
     }
 
-    @GetMapping("/api/images/{username}")
-    public ResponseEntity<Resource> downloadFile(@PathVariable String username) {
+    @GetMapping("/images/{username}")
+    public ResponseEntity<Resource> getAvatar(@PathVariable String username) {
         DBFile dbFile = this.dbFileStorageService.getFile(username);
 
         return ResponseEntity.ok()
@@ -32,12 +33,12 @@ public class FileController {
                 .body(new ByteArrayResource(dbFile.getData()));
     }
 
-    @PostMapping("/api/images/{username}")
-    public UploadFileResponse uploadFile(@RequestParam("file") MultipartFile file, @PathVariable String username){
+    @PostMapping("/images/{username}")
+    public UploadFileResponse updateAvatar(@RequestParam("file") MultipartFile file, @PathVariable String username){
         DBFile dbFile = this.dbFileStorageService.storeFile(file, username);
 
         String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path(String.format("api/image/%s", username))
+                .path(String.format("api/images/%s", username))
                 .toUriString();
 
         return new UploadFileResponse(dbFile.getFileName(), fileDownloadUri, file.getContentType(), file.getSize());

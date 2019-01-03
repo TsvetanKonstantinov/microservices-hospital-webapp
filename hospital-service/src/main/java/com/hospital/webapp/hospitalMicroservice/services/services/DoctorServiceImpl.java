@@ -1,13 +1,16 @@
 package com.hospital.webapp.hospitalMicroservice.services.services;
 
+import com.hospital.webapp.hospitalMicroservice.models.entity.DBFile;
 import com.hospital.webapp.hospitalMicroservice.models.entity.Doctor;
 import com.hospital.webapp.hospitalMicroservice.models.entity.ScheduleHour;
 import com.hospital.webapp.hospitalMicroservice.repositories.DoctorsRepository;
 import com.hospital.webapp.hospitalMicroservice.services.interfaces.DoctorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import javax.transaction.Transactional;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -40,7 +43,12 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public Doctor registerDoctor(Doctor doctor) {
+    public void registerDoctor(Doctor doctor) throws IllegalArgumentException, IOException {
+        if (this.doctorsRepository.findByUsername(doctor.getUsername()) != null) {
+            throw new IllegalArgumentException(String.format("Doctor with username %s already exists!",
+                    doctor.getUsername()));
+        }
+
         Set<ScheduleHour> doctorsMonthlyHours = new HashSet<>();
         LocalDate date = LocalDate.now();   //Start from today
         for (int i = 0; i < WORKING_DAYS; i++) {
@@ -54,7 +62,12 @@ public class DoctorServiceImpl implements DoctorService {
         }
         doctor.setScheduleHours(doctorsMonthlyHours);
 
-        return this.doctorsRepository.save(doctor);
+        String fileName = "/src/main/resources/doctor-default-image.png";
+        File defaultAvatar = new File(System.getProperty("user.dir") + fileName);
+        DBFile dbFile = new DBFile(fileName,
+                Files.probeContentType(defaultAvatar.toPath()), Files.readAllBytes(defaultAvatar.toPath()));
+        doctor.setAvatar(dbFile);
+        this.doctorsRepository.save(doctor);
     }
 
     @Override
@@ -92,6 +105,4 @@ public class DoctorServiceImpl implements DoctorService {
         bookedHour.setDoctor(doctor);
         this.doctorsRepository.save(doctor);
     }
-
-
 }
